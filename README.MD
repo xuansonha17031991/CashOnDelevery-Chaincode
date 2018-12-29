@@ -7,7 +7,7 @@ you need to install fabric-examples version 1.4 on you machine, but we re-commen
 - Go to fabric-samples's chain-code directory  
 - Open your terminal and run this command to install
 ```bash
-git clone 
+git clone https://github.com/xuansonha17031991/CashOnDelevery-Chaincode.git
 ```
 - Now you're ready
 ##Usage
