@@ -375,7 +375,7 @@ func (t *COD_chaincode) delete(stub shim.ChaincodeStubInterface, args []string) 
 
 	name := args[0]
 
-	//get thong tin cua user
+	//get user's information
 	old_owner_as_byte, err := stub.GetPrivateData("CODcollection", name)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -388,13 +388,13 @@ func (t *COD_chaincode) delete(stub shim.ChaincodeStubInterface, args []string) 
 		return shim.Error(jsRespon)
 	}
 
-	//xoa du lieu
+	//delete data
 	err = stub.DelPrivateData("CODcollection", name)
 	if err != nil {
 		return shim.Error("data does not exist")
 	}
 
-	//tao lai gia tri key
+	//create key
 	indexName := "name~balance"
 	balanceNameIndexKey, err := stub.CreateCompositeKey(indexName, []string{owner_new_info.Name, strconv.Itoa(owner_new_info.Balance)})
 	if err != nil {
