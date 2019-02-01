@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #Cash On Delivery Chaincode
 ##Description
 this is smartcontract if the Cash On Delivery (COD) system 
@@ -8,6 +9,18 @@ you need to install fabric-examples version 1.4 on you machine, but we recomment
 - Open your terminal and run this command to install
 ```bash
 git clone 
+=======
+#Cash On Delivery Chain-code
+##Description
+this is smart contract if the Cash On Delivery (COD) system 
+##Prerequisites
+you need to install fabric-examples version 1.4 on you machine, but we re-comment it should be installed into go path directory. If this is a first time run (curl -sSL http://bit.ly/2ysbOFE | bash -s 1.4.0-rc2) if not, just clone fabric-examples by run (git clone https://github.com/hyperledger/fabric-samples.git) command
+##Installation
+- Go to fabric-samples's chain-code directory  
+- Open your terminal and run this command to install
+```bash
+git clone https://github.com/xuansonha17031991/CashOnDelevery-Chaincode.git
+>>>>>>> 362a67fc1dc5b2a715a63360e6455928dd2236f9
 ```
 - Now you're ready
 ##Usage
@@ -20,7 +33,11 @@ git clone
 ```
 ./byfn.sh up -c [your channel's name]
 ```
+<<<<<<< HEAD
 ###Install and instantiate chaincode with a collection
+=======
+###Install and instantiate chain-code with a collection
+>>>>>>> 362a67fc1dc5b2a715a63360e6455928dd2236f9
 - BYFN network is started, enter the CLI container.
 ```
 docker exec -it cli bash
@@ -29,7 +46,11 @@ docker exec -it cli bash
 ```
 root@81eac8493633:/opt/gopath/src/github.com/hyperledger/fabric/peer#
 ```
+<<<<<<< HEAD
 - Run this commad
+=======
+- Run this command
+>>>>>>> 362a67fc1dc5b2a715a63360e6455928dd2236f9
 ```
 peer chaincode install -n COD -v 1.0 -p github.com/chaincode/COD/COD_chaincode/
 ```
@@ -55,7 +76,11 @@ peer chaincode instantiate -o orderer.example.com:7050 --tls --cafile $ORDERER_C
 ##Contributing
 You're welcome to make a pull requests
 ##Support
+<<<<<<< HEAD
 - Ha Xuan Son - 
+=======
+- Ha Xuan Son - hxson@ctuet.edu.vn
+>>>>>>> 362a67fc1dc5b2a715a63360e6455928dd2236f9
 - Nguyen Quoc Nghiep - nqnghiep.ktpm0115@student.ctuet.edu.vn
 - Le Hai Trieu - lhtrieu.ktpm0115@student.ctuet.edu.vn
 ##Roadmap
@@ -65,4 +90,8 @@ Ha Xuan Son  - Team leader
 Nguyen Quoc Nghiep - Develop
 Le Hai Trieu - Develop
 ##Status
+<<<<<<< HEAD
 This project in processing
+=======
+This project in processing
+>>>>>>> 362a67fc1dc5b2a715a63360e6455928dd2236f9
