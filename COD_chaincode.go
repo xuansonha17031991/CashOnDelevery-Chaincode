@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -18,6 +20,12 @@ type Seller struct {
 	Asset      string `json:"asset"`
 	Quantity   int    `json:"quantity"`
 	Price      int    `json:"price"`
+}
+
+type AssetHash struct {
+	ObjectType string `json:"docType"`
+	OrderID    string `json:"orderid"`
+	AssetHash  string `json:"assethash"`
 }
 
 type Balance struct {
@@ -43,6 +51,7 @@ type Order struct {
 	Asset      string `json:"asset"`
 	Quantity   int    `json:"quantity"`
 	Price      int    `json:"price"`
+	AssetHash  string `json:"assethash"`
 	Status     string `json:"status"`
 }
 
@@ -54,9 +63,12 @@ func main() {
 	}
 }
 
-// init chaincode
+// Init chaincode
 func (t *COD_chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	return shim.Success(nil)
+}
+func (t *COD_chaincode) ten_ham() {
+
 }
 
 // Invoke
@@ -77,6 +89,8 @@ func (t *COD_chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.transferMoney(stub, args)
 	case "createOrder":
 		return t.createOrder(stub, args)
+	case "createAssetHash":
+		return t.createAssetHash(stub, args)
 	default:
 		fmt.Println("Invoke did not find function: " + function)
 		return shim.Error("Received unknown function invocation")
@@ -116,7 +130,7 @@ func (t *COD_chaincode) createCustomer(stub shim.ChaincodeStubInterface, args []
 	}
 
 	//save to database
-	err = stub.PutPrivateData("CODcollection", name, customer_to_byte)
+	err = stub.PutPrivateData("customerCollection", name, customer_to_byte)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -128,7 +142,7 @@ func (t *COD_chaincode) createCustomer(stub shim.ChaincodeStubInterface, args []
 		return shim.Error(err.Error())
 	}
 	value := []byte{0x00}
-	stub.PutPrivateData("CODcollection", customerNameIndexKey, value)
+	stub.PutPrivateData("customerCollection", customerNameIndexKey, value)
 
 	return shim.Success(nil)
 }
@@ -173,7 +187,7 @@ func (t *COD_chaincode) createSeller(stub shim.ChaincodeStubInterface, args []st
 	}
 
 	//save to database
-	err = stub.PutPrivateData("CODcollection", name, seller_to_byte)
+	err = stub.PutPrivateData("assetCollection", name, seller_to_byte)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -187,7 +201,7 @@ func (t *COD_chaincode) createSeller(stub shim.ChaincodeStubInterface, args []st
 
 	//save index
 	value := []byte{0x00}
-	stub.PutPrivateData("CODcollection", assetNameIndexKey, value)
+	stub.PutPrivateData("assetCollection", assetNameIndexKey, value)
 
 	return shim.Success(nil)
 }
@@ -197,17 +211,17 @@ func (t *COD_chaincode) query(stub shim.ChaincodeStubInterface, args []string) p
 	var name, jsonResp string
 	var err error
 
-	if len(args) != 1 {
-		return shim.Error("sai roi, nhap ten")
+	if len(args) != 2 {
+		return shim.Error("index of object is invalid")
 	}
 
 	name = args[0]
-	valAsBytes, err := stub.GetPrivateData("CODcollection", name)
+	valAsBytes, err := stub.GetPrivateData(args[1], name)
 	if err != nil {
-		jsonResp = "{\"Error\":\"Failed to get state for " + name + "\"}"
+		jsonResp = "{\"Error\":\"Failed to get state for " + name + ": " + err.Error() + "\"}"
 		return shim.Error(jsonResp)
 	} else if valAsBytes == nil {
-		jsonResp = "{\"Error\":\"Marble does not exist: " + name + "\"}"
+		jsonResp = "{\"Error\":\"object does not exist: " + name + "\"}"
 		return shim.Error(jsonResp)
 	}
 
@@ -235,7 +249,7 @@ func (t *COD_chaincode) createBalance(stub shim.ChaincodeStubInterface, args []s
 	}
 
 	//save to ledger
-	err = stub.PutPrivateData("CODcollection", name, owner_to_byte)
+	err = stub.PutPrivateData("balanceCollection", name, owner_to_byte)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -247,7 +261,7 @@ func (t *COD_chaincode) createBalance(stub shim.ChaincodeStubInterface, args []s
 		return shim.Error(err.Error())
 	}
 	value := []byte{0x00}
-	stub.PutPrivateData("CODcollection", balanceNameIndexKey, value)
+	stub.PutPrivateData("balanceCollection", balanceNameIndexKey, value)
 
 	return shim.Success(nil)
 }
@@ -268,7 +282,7 @@ func (t *COD_chaincode) transferMoney(stub shim.ChaincodeStubInterface, args []s
 	new_owner_name := args[2]
 
 	//get old owner's information
-	old_owner_as_byte, err := stub.GetPrivateData("CODcollection", old_owner_name)
+	old_owner_as_byte, err := stub.GetPrivateData("balance", old_owner_name)
 	if err != nil {
 		return shim.Error("cannot get owner's infor")
 	} else if old_owner_as_byte == nil {
@@ -278,7 +292,7 @@ func (t *COD_chaincode) transferMoney(stub shim.ChaincodeStubInterface, args []s
 	//unmarshal to old_owner variable
 	err = json.Unmarshal(old_owner_as_byte, &old_owner)
 	if err != nil {
-		return shim.Error("loi khong the unmarshal")
+		return shim.Error("cannot unmarshal data")
 	}
 
 	//check old_owner balance
@@ -289,13 +303,13 @@ func (t *COD_chaincode) transferMoney(stub shim.ChaincodeStubInterface, args []s
 
 	new_info_old_owner_as_byte, err := json.Marshal(old_owner)
 
-	err = stub.PutPrivateData("CODcollection", old_owner_name, new_info_old_owner_as_byte)
+	err = stub.PutPrivateData("balanceCollection", old_owner_name, new_info_old_owner_as_byte)
 	if err != nil {
 		return shim.Error("cannot save new info of old owner")
 	}
 
 	//get info of virtual account
-	new_owner_as_byte, err := stub.GetPrivateData("CODcollection", new_owner_name)
+	new_owner_as_byte, err := stub.GetPrivateData("balance", new_owner_name)
 	if err != nil {
 		return shim.Error("cannot get info of new owner")
 	}
@@ -308,7 +322,7 @@ func (t *COD_chaincode) transferMoney(stub shim.ChaincodeStubInterface, args []s
 	if err != nil {
 		return shim.Error("cannot marshal new info of new owner")
 	}
-	err = stub.PutPrivateData("CODcollection", new_owner_name, new_owner_new_info_as_byte)
+	err = stub.PutPrivateData("balanceCollection", new_owner_name, new_owner_new_info_as_byte)
 	if err != nil {
 		return shim.Error("cannot put new data of new owner")
 	}
@@ -340,13 +354,18 @@ func (t *COD_chaincode) createOrder(stub shim.ChaincodeStubInterface, args []str
 	}
 
 	objectType := "Order"
-	order := &Order{objectType, id, customer, seller, delivery, asset, quantity, price, status}
+	hash := sha256.New()
+	hash.Write([]byte(seller + asset + string(quantity) + string(price)))
+	md := hash.Sum(nil)
+	asset_hash := hex.EncodeToString(md)
+
+	order := &Order{objectType, id, customer, seller, delivery, asset, quantity, price, asset_hash, status}
 	order_to_byte, err_or := json.Marshal(order)
 	if err_or != nil {
 		return shim.Error(err_or.Error())
 	}
 
-	err_or = stub.PutPrivateData("CODcollection", id, order_to_byte)
+	err_or = stub.PutPrivateData("orderCollection", id, order_to_byte)
 	if err_or != nil {
 		return shim.Error(err_or.Error())
 	}
@@ -360,8 +379,54 @@ func (t *COD_chaincode) createOrder(stub shim.ChaincodeStubInterface, args []str
 
 	//save key
 	value := []byte{0x00}
-	stub.PutPrivateData("CODcollection", orderNameIndexKey, value)
+	stub.PutPrivateData("orderCollection", orderNameIndexKey, value)
 
+	return shim.Success(nil)
+}
+
+func (t *COD_chaincode) createAssetHash(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	if len(args) != 5 {
+		return shim.Error("expting 5 parameters")
+	}
+	OrderID := args[0]
+	sellerId := args[1]
+	asset := args[2]
+	quantity, err1 := strconv.Atoi(args[3])
+	if err1 != nil {
+		return shim.Error(err1.Error())
+	}
+	price, err2 := strconv.Atoi(args[4])
+	if err2 != nil {
+		return shim.Error(err2.Error())
+	}
+
+	ObjectType := "AssetHash"
+	hash := sha256.New()
+	hash.Write([]byte(sellerId + asset + string(quantity) + string(price)))
+	md := hash.Sum(nil)
+	asset_hash := hex.EncodeToString(md)
+
+	AssetHash := &AssetHash{ObjectType, OrderID, asset_hash}
+	AssetHashToByte, err := json.Marshal(AssetHash)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	err = stub.PutPrivateData("assetHashCollection", OrderID, AssetHashToByte)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	//create key
+	indexName := "OrderID~Hash"
+	orderHashIndexKey, errKey := stub.CreateCompositeKey(indexName, []string{ObjectType, OrderID, asset_hash})
+	if errKey != nil {
+		return shim.Error(errKey.Error())
+	}
+
+	//save key
+	value := []byte{0x00}
+	stub.PutPrivateData("assetHashCollection", orderHashIndexKey, value)
 	return shim.Success(nil)
 }
 
@@ -369,14 +434,14 @@ func (t *COD_chaincode) delete(stub shim.ChaincodeStubInterface, args []string) 
 	var owner_new_info Balance
 	var jsRespon string
 
-	if len(args) != 1 {
+	if len(args) != 2 {
 		return shim.Error("expecting name of user")
 	}
 
 	name := args[0]
 
 	//get user's information
-	old_owner_as_byte, err := stub.GetPrivateData("CODcollection", name)
+	old_owner_as_byte, err := stub.GetPrivateData(args[1], name)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -389,7 +454,7 @@ func (t *COD_chaincode) delete(stub shim.ChaincodeStubInterface, args []string) 
 	}
 
 	//delete data
-	err = stub.DelPrivateData("CODcollection", name)
+	err = stub.DelPrivateData(args[1], name)
 	if err != nil {
 		return shim.Error("data does not exist")
 	}
@@ -401,7 +466,7 @@ func (t *COD_chaincode) delete(stub shim.ChaincodeStubInterface, args []string) 
 		return shim.Error(err.Error())
 	}
 
-	err = stub.DelPrivateData("CODcollection", balanceNameIndexKey)
+	err = stub.DelPrivateData(args[1], balanceNameIndexKey)
 	if err != nil {
 		return shim.Error("cannot delete key")
 	}

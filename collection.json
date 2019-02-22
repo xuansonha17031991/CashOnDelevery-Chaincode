@@ -1,6 +1,38 @@
 [
 	{
-		"name": "CODcollection",
+		"name": "assetCollection",
+		"policy": "OR('Org1MSP.member', 'Org2MSP.member', 'OrdererMSP.member')",
+		"requiredPeerCount": 0,
+		"maxPeerCount": 3,
+		"blockToLive": 100,
+		"memberOnlyRead": true
+	},
+	{
+		"name": "assetHashCollection",
+		"policy": "OR('Org2MSP.member','OrdererMSP.member')",
+		"requiredPeerCount": 0,
+		"maxPeerCount": 3,
+		"blockToLive": 100,
+		"memberOnlyRead": true
+	},
+	{
+		"name": "orderCollection",
+		"policy": "OR('Org1MSP.member', 'OrdererMSP.member')",
+		"requiredPeerCount": 0,
+		"maxPeerCount": 3,
+		"blockToLive": 100,
+		"memberOnlyRead": true
+	},
+	{
+		"name": "customerCollection",
+		"policy": "OR('Org1MSP.member', 'Org2MSP.member', 'OrdererMSP.member')",
+		"requiredPeerCount": 0,
+		"maxPeerCount": 3,
+		"blockToLive": 100,
+		"memberOnlyRead": true
+	},
+	{
+		"name": "balanceCollection",
 		"policy": "OR('Org1MSP.member', 'Org2MSP.member')",
 		"requiredPeerCount": 0,
 		"maxPeerCount": 3,
