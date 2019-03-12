@@ -1,7 +1,7 @@
 [
 	{
 		"name": "assetCollection",
-		"policy": "OR('Org1MSP.member', 'Org2MSP.member', 'OrdererMSP.member')",
+		"policy": "OR('Org1MSP.member','Org2MSP.member','OrdererMSP.member')",
 		"requiredPeerCount": 0,
 		"maxPeerCount": 3,
 		"blockToLive": 100,
@@ -17,7 +17,7 @@
 	},
 	{
 		"name": "orderCollection",
-		"policy": "OR('Org1MSP.member', 'OrdererMSP.member')",
+		"policy": "OR('Org1MSP.member','OrdererMSP.member')",
 		"requiredPeerCount": 0,
 		"maxPeerCount": 3,
 		"blockToLive": 100,
@@ -25,15 +25,47 @@
 	},
 	{
 		"name": "customerCollection",
-		"policy": "OR('Org1MSP.member', 'Org2MSP.member', 'OrdererMSP.member')",
+		"policy": "OR('Org1MSP.member','Org2MSP.member','OrdererMSP.member')",
 		"requiredPeerCount": 0,
 		"maxPeerCount": 3,
 		"blockToLive": 100,
 		"memberOnlyRead": true
 	},
 	{
-		"name": "balanceCollection",
-		"policy": "OR('Org1MSP.member', 'Org2MSP.member')",
+		"name": "balanceOrg1Collection",
+		"policy": "OR('Org1MSP.member')",
+		"requiredPeerCount": 0,
+		"maxPeerCount": 3,
+		"blockToLive": 100,
+		"memberOnlyRead": true
+	},
+	{
+		"name": "balanceOrg2Collection",
+		"policy": "OR('Org2MSP.member')",
+		"requiredPeerCount": 0,
+		"maxPeerCount": 3,
+		"blockToLive": 100,
+		"memberOnlyRead": true
+	},
+	{
+		"name": "mortgageCollection",
+		"policy": "OR('Org1MSP.member','Org2MSP.member')",
+		"requiredPeerCount": 0,
+		"maxPeerCount": 3,
+		"blockToLive": 100,
+		"memberOnlyRead": true
+	},
+	{
+		"name": "verifyShipperCollection",
+		"policy": "OR('Org1MSP.member','Org2MSP.member', 'OrdererMSP.member')",
+		"requiredPeerCount": 0,
+		"maxPeerCount": 3,
+		"blockToLive": 100,
+		"memberOnlyRead": true
+	},
+	{
+		"name": "limitTimeCollection",
+		"policy": "OR('Org1MSP.member','Org2MSP.member', 'OrdererMSP.member')",
 		"requiredPeerCount": 0,
 		"maxPeerCount": 3,
 		"blockToLive": 100,

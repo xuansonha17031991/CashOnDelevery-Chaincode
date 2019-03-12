@@ -1,11 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strconv"
+	"time"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	pb "github.com/hyperledger/fabric/protos/peer"
@@ -14,7 +17,7 @@ import (
 type COD_chaincode struct {
 }
 
-type Seller struct {
+type Asset struct {
 	ObjectType string `json:"docType"`
 	Name       string `json:"name"`
 	Asset      string `json:"asset"`
@@ -22,10 +25,17 @@ type Seller struct {
 	Price      int    `json:"price"`
 }
 
-type AssetHash struct {
+type OrderHash struct {
 	ObjectType string `json:"docType"`
 	OrderID    string `json:"orderid"`
 	AssetHash  string `json:"assethash"`
+}
+
+type OrderHashWithImage struct {
+	ObjectType string `json:"docType"`
+	OrderID    string `json:"orderid"`
+	AssetHash  string `json:"assethash"`
+	ImageHash  string `json:"imagehash"`
 }
 
 type Balance struct {
@@ -48,11 +58,41 @@ type Order struct {
 	Customer   string `json:"customer"`
 	Seller     string `json:"seller"`
 	Delivery   string `json:"delivery"`
-	Asset      string `json:"asset"`
+	AssetName  string `json:"assetname"`
+	Detail     string `json:"detail"`
 	Quantity   int    `json:"quantity"`
 	Price      int    `json:"price"`
-	AssetHash  string `json:"assethash"`
 	Status     string `json:"status"`
+}
+
+type OrderWithImage struct {
+	ObjectType string `json:"docType"`
+	OrderID    string `json:"orderid"`
+	Customer   string `json:"customer"`
+	Seller     string `json:"seller"`
+	Delivery   string `json:"delivery"`
+	AssetName  string `json:"assetname"`
+	Detail     string `json:"detail"`
+	Image      []byte `json:"image"`
+	Quantity   int    `json:"quantity"`
+	Price      int    `json:"price"`
+	Status     string `json:"status"`
+}
+
+type VerifyShipper struct {
+	ObjectType string `json:"docType"`
+	OrderID    string `json:"orderid`
+	Hash       string `json:"hash"`
+	Location   string `json:"location"`
+}
+
+type LimitTime struct {
+	ObjectType string `json:"docType"`
+	OrderID    string `json:"orderid"`
+	SellerID   string `json:"sellerid"`
+	DeliveryID string `json:"deliveryid"`
+	Time       string `json:"limittime"`
+	Day        string `json:"day"`
 }
 
 /*main*/
@@ -67,9 +107,6 @@ func main() {
 func (t *COD_chaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	return shim.Success(nil)
 }
-func (t *COD_chaincode) ten_ham() {
-
-}
 
 // Invoke
 func (t *COD_chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
@@ -79,8 +116,8 @@ func (t *COD_chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	switch function {
 	case "createCustomer":
 		return t.createCustomer(stub, args)
-	case "createSeller":
-		return t.createSeller(stub, args)
+	case "createAsset":
+		return t.createAsset(stub, args)
 	case "query":
 		return t.query(stub, args)
 	case "createBalance":
@@ -99,6 +136,7 @@ func (t *COD_chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 
 //create customer information
 func (t *COD_chaincode) createCustomer(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	start := time.Now()
 	if len(args) != 4 {
 		return shim.Error("expecting 4 argument")
 	}
@@ -143,12 +181,15 @@ func (t *COD_chaincode) createCustomer(stub shim.ChaincodeStubInterface, args []
 	}
 	value := []byte{0x00}
 	stub.PutPrivateData("customerCollection", customerNameIndexKey, value)
-
+	elapsed := time.Since(start)
+	fmt.Printf("take %s", elapsed)
 	return shim.Success(nil)
 }
 
 //create seller information
-func (t *COD_chaincode) createSeller(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+func (t *COD_chaincode) createAsset(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	start := time.Now()
+	time.Sleep(time.Second * 2)
 	if len(args) != 4 {
 		return shim.Error("there must be 4 argument")
 	}
@@ -180,7 +221,7 @@ func (t *COD_chaincode) createSeller(stub shim.ChaincodeStubInterface, args []st
 
 	//convert variable to json
 	objectType := "Seller"
-	seller := &Seller{objectType, name, asset, quantity, price}
+	seller := &Asset{objectType, name, asset, quantity, price}
 	seller_to_byte, err := json.Marshal(seller)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -202,12 +243,15 @@ func (t *COD_chaincode) createSeller(stub shim.ChaincodeStubInterface, args []st
 	//save index
 	value := []byte{0x00}
 	stub.PutPrivateData("assetCollection", assetNameIndexKey, value)
-
+	elapsed := time.Since(start)
+	fmt.Printf("take %s", elapsed)
 	return shim.Success(nil)
 }
 
 //query data
 func (t *COD_chaincode) query(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	start := time.Now()
+	time.Sleep(time.Second * 2)
 	var name, jsonResp string
 	var err error
 
@@ -224,20 +268,32 @@ func (t *COD_chaincode) query(stub shim.ChaincodeStubInterface, args []string) p
 		jsonResp = "{\"Error\":\"object does not exist: " + name + "\"}"
 		return shim.Error(jsonResp)
 	}
-
+	elapsed := time.Since(start)
+	fmt.Printf("take %s", elapsed)
 	return shim.Success(valAsBytes)
 }
 
 //create delivery information
 func (t *COD_chaincode) createBalance(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 2 {
-		return shim.Error("expecting 2 argument, name and balance")
+	start := time.Now()
+	time.Sleep(time.Second * 2)
+	if len(args) != 3 {
+		return shim.Error("expecting 3 argument, name and balance")
 	}
 
 	name := args[0]
 	balance, err_owner_balance := strconv.Atoi(args[1])
 	if err_owner_balance != nil {
 		return shim.Error("balance must be a number")
+	}
+	collection := ""
+	switch args[2] {
+	case "Org1":
+		collection = "balanceOrg1Collection"
+	case "Org2":
+		collection = "balanceOrg2Collection"
+	case "mortgage":
+		collection = "mortgageCollection"
 	}
 
 	//convert to json
@@ -249,7 +305,7 @@ func (t *COD_chaincode) createBalance(stub shim.ChaincodeStubInterface, args []s
 	}
 
 	//save to ledger
-	err = stub.PutPrivateData("balanceCollection", name, owner_to_byte)
+	err = stub.PutPrivateData(collection, name, owner_to_byte)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -261,13 +317,16 @@ func (t *COD_chaincode) createBalance(stub shim.ChaincodeStubInterface, args []s
 		return shim.Error(err.Error())
 	}
 	value := []byte{0x00}
-	stub.PutPrivateData("balanceCollection", balanceNameIndexKey, value)
-
+	stub.PutPrivateData(collection, balanceNameIndexKey, value)
+	elapsed := time.Since(start)
+	fmt.Printf("take %s", elapsed)
 	return shim.Success(nil)
 }
 
 //transfer money to new owner
 func (t *COD_chaincode) transferMoney(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	start := time.Now()
+	time.Sleep(time.Second * 2)
 	if len(args) != 3 {
 		return shim.Error("expecting 3 parameter precent owner, money, new owner")
 	}
@@ -328,23 +387,28 @@ func (t *COD_chaincode) transferMoney(stub shim.ChaincodeStubInterface, args []s
 	}
 
 	fmt.Println("transfer successful")
+	elapsed := time.Since(start)
+	fmt.Printf("take %s", elapsed)
 	return shim.Success(nil)
 }
 
 //create order information
 func (t *COD_chaincode) createOrder(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 8 {
-		return shim.Error("expecting 8 argument")
+	start := time.Now()
+	time.Sleep(time.Second * 2)
+	if len(args) != 10 {
+		return shim.Error("expecting 9 argument")
 	}
 
 	id := args[0]
 	customer := args[1]
 	seller := args[2]
 	delivery := args[3]
-	asset := args[4]
-	quantity, err_qu := strconv.Atoi(args[5])
-	price, err_pr := strconv.Atoi(args[6])
-	status := args[7]
+	assetname := args[4]
+	detail := args[5]
+	quantity, err_qu := strconv.Atoi(args[7])
+	price, err_pr := strconv.Atoi(args[8])
+	status := args[9]
 
 	if err_qu != nil {
 		return shim.Error("quantity must be a number")
@@ -354,12 +418,8 @@ func (t *COD_chaincode) createOrder(stub shim.ChaincodeStubInterface, args []str
 	}
 
 	objectType := "Order"
-	hash := sha256.New()
-	hash.Write([]byte(seller + asset + string(quantity) + string(price)))
-	md := hash.Sum(nil)
-	asset_hash := hex.EncodeToString(md)
 
-	order := &Order{objectType, id, customer, seller, delivery, asset, quantity, price, asset_hash, status}
+	order := &Order{objectType, id, customer, seller, delivery, assetname, detail, quantity, price, status}
 	order_to_byte, err_or := json.Marshal(order)
 	if err_or != nil {
 		return shim.Error(err_or.Error())
@@ -380,33 +440,102 @@ func (t *COD_chaincode) createOrder(stub shim.ChaincodeStubInterface, args []str
 	//save key
 	value := []byte{0x00}
 	stub.PutPrivateData("orderCollection", orderNameIndexKey, value)
+	elapsed := time.Since(start)
+	fmt.Printf("take %s", elapsed)
+	return shim.Success(nil)
+}
 
+//create order with imag
+func (t *COD_chaincode) createOrderWithImage(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	start := time.Now()
+	time.Sleep(time.Second * 2)
+	if len(args) != 10 {
+		return shim.Error("expecting 9 argument")
+	}
+
+	id := args[0]
+	customer := args[1]
+	seller := args[2]
+	delivery := args[3]
+	assetname := args[4]
+	detail := args[5]
+
+	imagelink := args[6]
+	file, err := os.Open(imagelink)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	//read img
+	fileInfo, _ := file.Stat()
+	var size int64 = fileInfo.Size()
+	imageAsBytes := make([]byte, size)
+
+	quantity, err_qu := strconv.Atoi(args[7])
+	price, err_pr := strconv.Atoi(args[8])
+	status := args[9]
+
+	if err_qu != nil {
+		return shim.Error("quantity must be a number")
+	}
+	if err_pr != nil {
+		return shim.Error("price must be a number")
+	}
+
+	objectType := "Order"
+
+	order := &OrderWithImage{objectType, id, customer, seller, delivery, assetname, detail, imageAsBytes, quantity, price, status}
+	order_to_byte, err_or := json.Marshal(order)
+	if err_or != nil {
+		return shim.Error(err_or.Error())
+	}
+
+	err_or = stub.PutPrivateData("orderCollection", id, order_to_byte)
+	if err_or != nil {
+		return shim.Error(err_or.Error())
+	}
+
+	//create key
+	indexName := "id~name"
+	orderNameIndexKey, err := stub.CreateCompositeKey(indexName, []string{order.OrderID, order.Customer})
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	//save key
+	value := []byte{0x00}
+	stub.PutPrivateData("orderCollection", orderNameIndexKey, value)
+	elapsed := time.Since(start)
+	fmt.Printf("take %s", elapsed)
 	return shim.Success(nil)
 }
 
 func (t *COD_chaincode) createAssetHash(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 5 {
-		return shim.Error("expting 5 parameters")
+	start := time.Now()
+	time.Sleep(time.Second * 2)
+	if len(args) != 6 {
+		return shim.Error("expting 6 parameters")
 	}
 	OrderID := args[0]
 	sellerId := args[1]
 	asset := args[2]
-	quantity, err1 := strconv.Atoi(args[3])
+	detail := args[3]
+	quantity, err1 := strconv.Atoi(args[4])
 	if err1 != nil {
 		return shim.Error(err1.Error())
 	}
-	price, err2 := strconv.Atoi(args[4])
+	price, err2 := strconv.Atoi(args[5])
 	if err2 != nil {
 		return shim.Error(err2.Error())
 	}
 
 	ObjectType := "AssetHash"
 	hash := sha256.New()
-	hash.Write([]byte(sellerId + asset + string(quantity) + string(price)))
+	hash.Write([]byte(sellerId + asset + detail + string(quantity) + string(price)))
 	md := hash.Sum(nil)
 	asset_hash := hex.EncodeToString(md)
 
-	AssetHash := &AssetHash{ObjectType, OrderID, asset_hash}
+	AssetHash := &OrderHash{ObjectType, OrderID, asset_hash}
 	AssetHashToByte, err := json.Marshal(AssetHash)
 	if err != nil {
 		return shim.Error(err.Error())
@@ -427,6 +556,78 @@ func (t *COD_chaincode) createAssetHash(stub shim.ChaincodeStubInterface, args [
 	//save key
 	value := []byte{0x00}
 	stub.PutPrivateData("assetHashCollection", orderHashIndexKey, value)
+	elapsed := time.Since(start)
+	fmt.Printf("take %s", elapsed)
+	return shim.Success(nil)
+}
+
+func (t *COD_chaincode) createAssetHashWithImage(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	start := time.Now()
+	time.Sleep(time.Second * 2)
+	if len(args) != 7 {
+		return shim.Error("expting 6 parameters")
+	}
+	orderID := args[0]
+	sellerId := args[1]
+	asset := args[2]
+	detail := args[3]
+	quantity, err1 := strconv.Atoi(args[4])
+	if err1 != nil {
+		return shim.Error(err1.Error())
+	}
+	price, err2 := strconv.Atoi(args[5])
+	if err2 != nil {
+		return shim.Error(err2.Error())
+	}
+
+	imagelink := args[6]
+	file, err := os.Open(imagelink)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	//read img
+	fileInfo, _ := file.Stat()
+	var size int64 = fileInfo.Size()
+	bytes := make([]byte, size)
+	buffer := bufio.NewReader(file)
+	_, err = buffer.Read(bytes)
+
+	//hash img
+	hashImage := sha256.New()
+	hashImage.Write(bytes)
+	mdImage := hashImage.Sum(nil)
+	imageHash := hex.EncodeToString(mdImage)
+
+	ObjectType := "AssetHash"
+	hash := sha256.New()
+	hash.Write([]byte(orderID + sellerId + asset + detail + string(quantity) + string(price)))
+	md := hash.Sum(nil)
+	asset_hash := hex.EncodeToString(md)
+
+	AssetHash := &OrderHashWithImage{ObjectType, orderID, asset_hash, imageHash}
+	AssetHashToByte, err := json.Marshal(AssetHash)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	err = stub.PutPrivateData("assetHashCollection", orderID, AssetHashToByte)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	//create key
+	indexName := "OrderID~Hash"
+	orderHashIndexKey, errKey := stub.CreateCompositeKey(indexName, []string{ObjectType, orderID, asset_hash})
+	if errKey != nil {
+		return shim.Error(errKey.Error())
+	}
+
+	//save key
+	value := []byte{0x00}
+	stub.PutPrivateData("assetHashCollection", orderHashIndexKey, value)
+	elapsed := time.Since(start)
+	fmt.Printf("take %s", elapsed)
 	return shim.Success(nil)
 }
 
@@ -470,6 +671,156 @@ func (t *COD_chaincode) delete(stub shim.ChaincodeStubInterface, args []string) 
 	if err != nil {
 		return shim.Error("cannot delete key")
 	}
+
+	return shim.Success(nil)
+}
+func (t *COD_chaincode) verifyShipper(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	start := time.Now()
+	time.Sleep(time.Second * 2)
+	if len(args) != 3 {
+		return shim.Error("there must be 2 arguments")
+	}
+
+	orderHash := OrderHash{}
+
+	id := args[0]
+	//get value as byte
+	valAsBytes, err := stub.GetPrivateData("assetHashCollection", id)
+	if err != nil {
+		return shim.Error("Failed to get state for " + id + ": " + err.Error() + "\"}")
+	} else if valAsBytes == nil {
+		return shim.Error("object does not exist: " + id + "\"")
+	}
+	//unmarshal data to orderHash
+	err = json.Unmarshal(valAsBytes, &orderHash)
+	if err != nil {
+		return shim.Error("cannot unmarshal data")
+	}
+
+	hashString := args[1]
+	location := args[2]
+
+	//verify hash string
+	if orderHash.AssetHash == hashString {
+		fmt.Println("verify successful")
+	} else {
+		fmt.Println("verify failed")
+	}
+	ObjectType := "VerifyShipper"
+	verify := &VerifyShipper{ObjectType, id, hashString, location}
+	VerifyToByte, errVerify := json.Marshal(verify)
+	if errVerify != nil {
+		return shim.Error(err.Error())
+	}
+
+	err = stub.PutPrivateData("verifyShipperCollection", id, VerifyToByte)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	//create key
+	indexName := "OrderID~Hash"
+	orderHashIndexKey, errKey := stub.CreateCompositeKey(indexName, []string{ObjectType, id, hashString, location})
+	if errKey != nil {
+		return shim.Error(errKey.Error())
+	}
+
+	//save key
+	value := []byte{0x00}
+	stub.PutPrivateData("assetHashCollection", orderHashIndexKey, value)
+	elapsed := time.Since(start)
+	fmt.Printf("take %s", elapsed)
+	return shim.Success(nil)
+}
+
+func (t *COD_chaincode) calculateOrderHash(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	start := time.Now()
+	time.Sleep(time.Second * 2)
+	if len(args) != 6 {
+		return shim.Error("expecting 5 argument")
+	}
+
+	sellerID := args[0]
+	asset := args[1]
+	detail := args[2]
+	quantity, err1 := strconv.Atoi(args[3])
+	if err1 != nil {
+		return shim.Error(err1.Error())
+	}
+	price, err2 := strconv.Atoi(args[4])
+	if err2 != nil {
+		return shim.Error(err2.Error())
+	}
+
+	imagelink := args[5]
+	file, err := os.Open(imagelink)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	//read img
+	fileInfo, _ := file.Stat()
+	var size int64 = fileInfo.Size()
+	bytes := make([]byte, size)
+	buffer := bufio.NewReader(file)
+	_, err = buffer.Read(bytes)
+
+	//hash img
+	hashImage := sha256.New()
+	hashImage.Write(bytes)
+	mdImage := hashImage.Sum(nil)
+	imageHash := hex.EncodeToString(mdImage)
+
+	hash := sha256.New()
+	hash.Write([]byte(sellerID + asset + detail + string(quantity) + string(price)))
+	md := hash.Sum(nil)
+	asset_hash := hex.EncodeToString(md)
+	fmt.Println("order's hash: ", asset_hash)
+
+	elapsed := time.Since(start)
+	fmt.Printf("take %s", elapsed)
+
+	return shim.Success(nil)
+}
+
+func (t *COD_chaincode) dealLimitTime(stub shim.ChaincodeStubInterface, args []string) pb.Response {
+	start := time.Now()
+	time.Sleep(time.Second * 2)
+
+	if len(args) != 5 {
+		return shim.Error("expecting 5 argument")
+	}
+	orderID := args[0]
+	sellerID := args[1]
+	deliveryID := args[2]
+	orderTime := args[3]
+	orderDay := args[4]
+
+	ObjectType := "LimitTime"
+	limitTime := &LimitTime{ObjectType, orderID, sellerID, deliveryID, orderTime, orderDay}
+	limitTimeToByte, errLimitTime := json.Marshal(limitTime)
+	if errLimitTime != nil {
+		return shim.Error(errLimitTime.Error())
+	}
+
+	errLimitTime = stub.PutPrivateData("limitTimeCollection", orderID, limitTimeToByte)
+	if errLimitTime != nil {
+		return shim.Error(errLimitTime.Error())
+	}
+
+	//create key
+	indexName := "orderID~sellerID"
+	orderIDIndexKey, errKey := stub.CreateCompositeKey(indexName, []string{ObjectType, orderID, sellerID, deliveryID, orderTime, orderDay})
+	if errKey != nil {
+		return shim.Error(errKey.Error())
+	}
+
+	//save key
+	value := []byte{0x00}
+	stub.PutPrivateData("limitTimeCollection", orderIDIndexKey, value)
+
+	elapsed := time.Since(start)
+	fmt.Printf("take %s", elapsed)
 
 	return shim.Success(nil)
 }
