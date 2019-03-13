@@ -114,20 +114,33 @@ func (t *COD_chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 	fmt.Printf("invoke is running" + function)
 
 	switch function {
-	case "createCustomer":
-		return t.createCustomer(stub, args)
+	case "calculateOrderHash":
+		return t.calculateOrderHash(stub, args)
 	case "createAsset":
 		return t.createAsset(stub, args)
-	case "query":
-		return t.query(stub, args)
-	case "createBalance":
-		return t.createBalance(stub, args)
-	case "transferMoney":
-		return t.transferMoney(stub, args)
-	case "createOrder":
-		return t.createOrder(stub, args)
 	case "createAssetHash":
 		return t.createAssetHash(stub, args)
+	case "createAssetHashWithImage":
+		return t.createAssetHashWithImage(stub, args)
+	case "createBalance":
+		return t.createBalance(stub, args)
+	case "createCustomer":
+		return t.createCustomer(stub, args)
+	case "createOrder":
+		return t.createOrder(stub, args)
+	case "createOrderWithImage":
+		return t.createOrderWithImage(stub, args)
+	case "dealLimitTime":
+		return t.dealLimitTime(stub, args)
+	case "delete":
+		return t.delete(stub, args)
+	case "query":
+		return t.query(stub, args)
+	case "transferMoney":
+		return t.transferMoney(stub, args)
+	case "verifyShipper":
+		return t.verifyShipper(stub, args)
+
 	default:
 		fmt.Println("Invoke did not find function: " + function)
 		return shim.Error("Received unknown function invocation")
@@ -186,7 +199,7 @@ func (t *COD_chaincode) createCustomer(stub shim.ChaincodeStubInterface, args []
 	return shim.Success(nil)
 }
 
-//create seller information
+//create asset
 func (t *COD_chaincode) createAsset(stub shim.ChaincodeStubInterface, args []string) pb.Response {
 	start := time.Now()
 	time.Sleep(time.Second * 2)
@@ -450,7 +463,7 @@ func (t *COD_chaincode) createOrderWithImage(stub shim.ChaincodeStubInterface, a
 	start := time.Now()
 	time.Sleep(time.Second * 2)
 	if len(args) != 10 {
-		return shim.Error("expecting 9 argument")
+		return shim.Error("expecting 10 argument")
 	}
 
 	id := args[0]
@@ -581,9 +594,9 @@ func (t *COD_chaincode) createAssetHashWithImage(stub shim.ChaincodeStubInterfac
 	}
 
 	imagelink := args[6]
-	file, err := os.Open(imagelink)
-	if err != nil {
-		fmt.Println(err.Error())
+	file, errImage := os.Open(imagelink)
+	if errImage != nil {
+		return shim.Error(errImage.Error())
 		os.Exit(1)
 	}
 	//read img
@@ -591,7 +604,7 @@ func (t *COD_chaincode) createAssetHashWithImage(stub shim.ChaincodeStubInterfac
 	var size int64 = fileInfo.Size()
 	bytes := make([]byte, size)
 	buffer := bufio.NewReader(file)
-	_, err = buffer.Read(bytes)
+	_, errImage = buffer.Read(bytes)
 
 	//hash img
 	hashImage := sha256.New()
@@ -776,6 +789,7 @@ func (t *COD_chaincode) calculateOrderHash(stub shim.ChaincodeStubInterface, arg
 	md := hash.Sum(nil)
 	asset_hash := hex.EncodeToString(md)
 	fmt.Println("order's hash: ", asset_hash)
+	fmt.Println("image's hash: ", imageHash)
 
 	elapsed := time.Since(start)
 	fmt.Printf("take %s", elapsed)
