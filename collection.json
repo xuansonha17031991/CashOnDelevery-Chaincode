@@ -48,6 +48,14 @@
 		"memberOnlyRead": true
 	},
 	{
+		"name": "deliveryCollection",
+		"policy": "OR('Org1MSP.member','Org2MSP.member','OrdererMSP.member')",
+		"requiredPeerCount": 0,
+		"maxPeerCount": 3,
+		"blockToLive": 100,
+		"memberOnlyRead": true
+	},
+	{
 		"name": "mortgageCollection",
 		"policy": "OR('Org1MSP.member','Org2MSP.member')",
 		"requiredPeerCount": 0,
@@ -66,6 +74,14 @@
 	{
 		"name": "limitTimeCollection",
 		"policy": "OR('Org1MSP.member','Org2MSP.member', 'OrdererMSP.member')",
+		"requiredPeerCount": 0,
+		"maxPeerCount": 3,
+		"blockToLive": 100,
+		"memberOnlyRead": true
+	},
+	{
+		"name": "imageOrderCollection",
+		"policy": "OR('Org1MSP.member','OrdererMSP.member')",
 		"requiredPeerCount": 0,
 		"maxPeerCount": 3,
 		"blockToLive": 100,
