@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"os"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -29,13 +29,6 @@ type OrderHash struct {
 	OrderID    string `json:"orderid"`
 	AssetHash  string `json:"assethash"`
 }
-
-// type OrderHashWithImage struct {
-// 	ObjectType string `json:"docType"`
-// 	OrderID    string `json:"orderid"`
-// 	AssetHash  string `json:"assethash"`
-// 	ImageHash  string `json:"imagehash"`
-// }
 
 type Balance struct {
 	ObjectType string `json:"docType"`
@@ -67,7 +60,7 @@ type Order struct {
 type ImageAsByte struct {
 	ObjectType  string `json:"docType"`
 	OrderID     string `json:"orderid"`
-	ImageAsByte []byte `json:"imageasbyte"`
+	ImageAsByte byte   `json:"imageasbyte"`
 }
 
 type Delivery struct {
@@ -133,8 +126,8 @@ func (t *COD_chaincode) Invoke(stub shim.ChaincodeStubInterface) pb.Response {
 		return t.dealLimitTime(stub, args)
 	case "delete":
 		return t.delete(stub, args)
-	case "imageToByte":
-		return t.imageToByte(stub, args)
+	// case "imageToByte":
+	// 	return t.imageToByte(stub, args)
 	case "query":
 		return t.query(stub, args)
 	case "transferMoney":
@@ -204,7 +197,8 @@ func (t *COD_chaincode) createCustomer(stub shim.ChaincodeStubInterface, args []
 	fmt.Println("time start: ", start.String())
 	fmt.Println("time end: ", end.String())
 	fmt.Println("execute time: ", elapsed.String())
-	fmt.Println("=============== end createCustomer function ===============")
+	printMemUsage()
+	fmt.Println("\n=============== end createCustomer function ===============")
 	return shim.Success(nil)
 }
 
@@ -273,7 +267,8 @@ func (t *COD_chaincode) createAsset(stub shim.ChaincodeStubInterface, args []str
 	fmt.Printf("time start: %s", start.String())
 	fmt.Printf("time end: %s", end.String())
 	fmt.Println("time execute: ", elapsed.String())
-	fmt.Println("=============== end createAsset function ===============")
+	printMemUsage()
+	fmt.Println("\n=============== end createAsset function ===============")
 	return shim.Success(nil)
 }
 
@@ -305,7 +300,8 @@ func (t *COD_chaincode) query(stub shim.ChaincodeStubInterface, args []string) p
 	fmt.Println("time start: ", start.String())
 	fmt.Println("time end: ", end.String())
 	fmt.Println("time execute: ", elapsed.String())
-	fmt.Println("=============== end query function ===============")
+	printMemUsage()
+	fmt.Println("\n=============== end query function ===============")
 
 	return shim.Success(valAsBytes)
 }
@@ -370,7 +366,8 @@ func (t *COD_chaincode) createBalance(stub shim.ChaincodeStubInterface, args []s
 	fmt.Println("time start: ", start.String())
 	fmt.Println("time end: ", end.String())
 	fmt.Println("time execute: ", elapsed.String())
-	fmt.Println("=============== end createBalance function ===============")
+	printMemUsage()
+	fmt.Println("\n=============== end createBalance function ===============")
 
 	return shim.Success(nil)
 }
@@ -428,7 +425,8 @@ func (t *COD_chaincode) createDelivery(stub shim.ChaincodeStubInterface, args []
 	fmt.Println("time start: ", start.String())
 	fmt.Println("time end: ", end.String())
 	fmt.Println("time execute: ", elapsed.String())
-	fmt.Println("=============== end createDelivery function ===============")
+	printMemUsage()
+	fmt.Println("\n=============== end createDelivery function ===============")
 	time.Sleep(time.Second)
 
 	return shim.Success(nil)
@@ -506,7 +504,8 @@ func (t *COD_chaincode) transferMoney(stub shim.ChaincodeStubInterface, args []s
 	fmt.Println("time start: ", start.String())
 	fmt.Println("time end: ", end.String())
 	fmt.Println("time execute: ", elapsed.String())
-	fmt.Println("=============== end transferMoney function ===============")
+	printMemUsage()
+	fmt.Println("\n=============== end transferMoney function ===============")
 	return shim.Success(nil)
 }
 
@@ -567,53 +566,8 @@ func (t *COD_chaincode) createOrder(stub shim.ChaincodeStubInterface, args []str
 	fmt.Println("time start: ", start.String())
 	fmt.Println("time end: ", end.String())
 	fmt.Println("time execute: ", elapsed.String())
-	fmt.Println("=============== end createOrder function ===============")
-
-	return shim.Success(nil)
-}
-
-//convert image to byte
-func (t *COD_chaincode) imageToByte(stub shim.ChaincodeStubInterface, args []string) pb.Response {
-	if len(args) != 2 {
-		return shim.Error("expecting 2 argument")
-	}
-
-	orderID := args[0]
-	orderImageLink := args[1]
-	file, errImageLink := os.Open(orderImageLink)
-	if errImageLink != nil {
-		fmt.Println(errImageLink.Error())
-		os.Exit(1)
-	}
-
-	//read img
-	fileInfo, _ := file.Stat()
-	var size int64 = fileInfo.Size()
-	imageAsBytes := make([]byte, size)
-
-	objectType := "ImageAsByte"
-
-	image := &ImageAsByte{objectType, orderID, imageAsBytes}
-	order_to_byte, err_order_to_byte := json.Marshal(image)
-	if err_order_to_byte != nil {
-		return shim.Error(err_order_to_byte.Error())
-	}
-
-	err_order_to_byte = stub.PutPrivateData("imageOrderCollection", orderID, order_to_byte)
-	if err_order_to_byte != nil {
-		return shim.Error(err_order_to_byte.Error())
-	}
-
-	//create key
-	indexName := "orderid"
-	orderImageIndexKey, errImageIndexKey := stub.CreateCompositeKey(indexName, []string{image.OrderID})
-	if errImageIndexKey != nil {
-		return shim.Error(errImageIndexKey.Error())
-	}
-
-	//save key
-	value := []byte{0x00}
-	stub.PutPrivateData("imageOrderCollection", orderImageIndexKey, value)
+	printMemUsage()
+	fmt.Println("\n=============== end createOrder function ===============")
 
 	return shim.Success(nil)
 }
@@ -673,7 +627,8 @@ func (t *COD_chaincode) createAssetHash(stub shim.ChaincodeStubInterface, args [
 	fmt.Println("time start: ", start.String())
 	fmt.Println("time end: ", end.String())
 	fmt.Println("time execute: ", elapsed.String())
-	fmt.Println("=============== end createAssetHash function ===============")
+	printMemUsage()
+	fmt.Println("\n=============== end createAssetHash function ===============")
 	return shim.Success(nil)
 }
 
@@ -785,7 +740,8 @@ func (t *COD_chaincode) verifyShipper(stub shim.ChaincodeStubInterface, args []s
 	fmt.Println("time start: ", start.String())
 	fmt.Println("time end: ", end.String())
 	fmt.Println("time execute: ", elapsed.String())
-	fmt.Println("=============== end verifyShipper function ===============")
+	printMemUsage()
+	fmt.Println("\n=============== end verifyShipper function ===============")
 	return shim.Success(nil)
 }
 
@@ -822,7 +778,8 @@ func (t *COD_chaincode) encrypAsset(stub shim.ChaincodeStubInterface, args []str
 	fmt.Println("time start: ", start)
 	fmt.Println("time end: ", end)
 	fmt.Println("execute time: ", elapsed)
-	fmt.Println("=============== end encrypAsset function ===============")
+	printMemUsage()
+	fmt.Println("\n=============== end encrypAsset function ===============")
 
 	return shim.Success(nil)
 }
@@ -869,7 +826,22 @@ func (t *COD_chaincode) dealLimitTime(stub shim.ChaincodeStubInterface, args []s
 	fmt.Println("time start: ", start.String())
 	fmt.Println("time end: ", end.String())
 	fmt.Printf("take %s", elapsed.String())
-	fmt.Println("=============== end dealLimitTime function ===============")
+	printMemUsage()
+	fmt.Println("\n=============== end dealLimitTime function ===============")
 
 	return shim.Success(nil)
+}
+
+func printMemUsage() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+
+	fmt.Printf("Alloc = %v MiB", bToMb(m.Alloc))
+	fmt.Printf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
+	fmt.Printf("\tSys = %v MiB", bToMb(m.Sys))
+	fmt.Printf("\tNumGC = %v MiB", m.NumGC)
+}
+
+func bToMb(b uint64) uint64 {
+	return b / 1024 / 1024
 }
